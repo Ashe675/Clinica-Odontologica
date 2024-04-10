@@ -28,12 +28,10 @@ const props = defineProps<Props>()
             </h1>
           </div>
         </div>
-        <div
-          class="h-12 w-12 hover:ring-4 user cursor-pointer relative ring-blue-700/30 rounded-full bg-cover bg-center bg-[url('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80')]"
-        >
-          <div
-            class="drop-down w-48 overflow-hidden bg-white rounded-md shadow absolute top-12 right-3"
-          ></div>
+        <div id="profile-picture" class="px-5">
+          <img src="../../../assets/user.jpeg"
+            class="h-12 w-12  hover:ring-4 user cursor-pointer relative ring-blue-700/30 rounded-full bg-cover bg-center]"
+          >
         </div>
       </div>
     </div>
