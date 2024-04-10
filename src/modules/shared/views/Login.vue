@@ -1,14 +1,47 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 
 const email = ref('')
 const password = ref('')
+const rol = ref('')
 const errorMsg = ref('')
 const errorAlert = ref(false);
+const router = useRouter()
 
 async function login() {
-// 
+  const response = await fetch('http://127.0.0.1:8000/usuarios/login/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      username: email.value,
+      password: password.value
+    })
+  }
+  )
+  const data = await response.json()
+  console.log(data)
+
+  if (data.detail) {
+    errorMsg.value = data.detail
+    console.log(errorMsg)
+    errorAlert.value = true;
+    setTimeout(() => {
+      errorAlert.value = false;
+    }, 3000);
+  }
+  if (data.token) {
+    localStorage.setItem('jwt-token', data.token)
+    rol.value=data.user.rol
+    if (rol.value== 'Doctor'){
+      router.push('/doctor')
+    }
+    else if (rol.value=='Recepcionista')
+    router.push('/reception')
+  }
 
 }
 
@@ -40,7 +73,7 @@ async function login() {
 
       <!--FORM-->
 
-      <form @submit.prevent="login">
+      <form @submit.prevent="login()">
         <!-- Username Input -->
         <div class="mb-4">
           <label for="username" class="block text-gray-600">Usuario</label>
@@ -50,6 +83,7 @@ async function login() {
             name="username"
             class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
             autocomplete="off"
+            v-model="email"
           />
         </div>
         <!-- Password Input -->
@@ -61,7 +95,15 @@ async function login() {
             name="password"
             class="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
             autocomplete="off"
+            v-model="password"
           />
+        </div>
+        <div class=" h-8 m-0">
+          <div
+          v-if="errorAlert"
+          class="inline-block align-baseline text-sm text-red-600 ml-2"
+        >  {{errorMsg}}
+        </div>
         </div>
         <!-- Remember Me Checkbox -->
         <div class="mb-4 flex items-center">
