@@ -3,7 +3,6 @@ import { ref } from "vue";
 import PatientsList from "@/modules/doctor/components/PatientsList.vue";
 import NavBar from "@/modules/shared/components/NavBar.vue";
 import SideBar from "@/modules/shared/components/SideBar.vue";
-import PatientsDiagnosticList from "../components/PatientsDiagnosticList.vue";
 
 
 interface UserResponse {
@@ -16,7 +15,7 @@ const userData = ref<UserResponse>({
     lastName: "",
 });
 
-const selectedOption = ref("cosulta");
+const selectedOption = ref("consulta");
 const userRole='D'
 
 function updateSelectedOption(value: string){
@@ -50,12 +49,12 @@ selectedOption.value= value
                     <PatientsList/>
 
                     </div>
-                    <div
+                    <!-- <div
                         v-if="selectedOption === 'expedientes'"
                         class="p-0 sm:p-6 xl:p-8 h-full overflow-y-auto"
                     >
                     <PatientsDiagnosticList/>
-                    </div>
+                    </div> -->
                 </main>
             </div>
         </div>

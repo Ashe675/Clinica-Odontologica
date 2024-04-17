@@ -25,8 +25,8 @@ async function login() {
   const data = await response.json()
   console.log(data)
 
-  if (data.detail) {
-    errorMsg.value = data.detail
+  if (data.error) {
+    errorMsg.value = data.error
     console.log(errorMsg)
     errorAlert.value = true;
     setTimeout(() => {
@@ -35,6 +35,7 @@ async function login() {
   }
   if (data.token) {
     localStorage.setItem('jwt-token', data.token)
+    localStorage.setItem('rol', data.user.rol)
     rol.value=data.user.rol
     if (rol.value== 'Doctor'){
       router.push('/doctor')

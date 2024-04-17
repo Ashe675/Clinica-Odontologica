@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { useRouter } from 'vue-router'
+const router = useRouter()
 import { defineEmits, ref } from 'vue';
 
 const selectedOption = ref("consulta");
@@ -23,7 +25,9 @@ const props= defineProps<Props>()
 
 async function logOut() {
     localStorage.removeItem("jwt-token");
-    window.location.reload();
+    router.push('/')
+    //window.location.reload();
+
 }
 
 </script>
@@ -65,7 +69,7 @@ async function logOut() {
                                 >
                             </a>
                         </li>
-                        <li>
+                        <!-- <li>
                             <a
                                 href="#"
                                 target="_blank"
@@ -89,7 +93,7 @@ async function logOut() {
                                     >Expedientes</span
                                 >
                             </a>
-                        </li>
+                        </li> -->
                             
                         <li v-if="props.role=='R'">
                             <a

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+
 interface Props {
   firstName: String
   lastName: String

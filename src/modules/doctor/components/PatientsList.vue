@@ -1,14 +1,54 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onBeforeMount } from 'vue'
 
 var currentPatient = ref('')
-
 var patientSelected = ref(false)
+var patients = ref([])
+var recordSelected = ref(false)
+var recordSelectedId = ref(0)
+var invoiceSelected = ref(false)
+
+
+const openRecord = (id: number) => {
+  recordSelectedId.value = id
+  recordSelected.value = true
+  GetPatient(id)
+}
 
 const updatePatient = (name: string) => {
   currentPatient.value = name
   patientSelected.value = true
 }
+
+async function GetPatient(id: number) {
+  const response = await fetch(`http://127.0.0.1:8000/api_pacientes/pacientes/${id + 1}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${localStorage.getItem('jwt-token')}`
+    }
+  })
+  const data = await response.json()
+  console.log('paciente', data)
+}
+
+
+async function PatientsList() {
+  const response = await fetch('http://127.0.0.1:8000/api_pacientes/pacientes/', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${localStorage.getItem('jwt-token')}`
+    }
+  })
+  const data = await response.json()
+  patients.value = data
+  console.log(data)
+}
+
+onBeforeMount(() => {
+  PatientsList()
+})
 </script>
 
 <template>
@@ -73,61 +113,72 @@ const updatePatient = (name: string) => {
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
-              Nombre
+              Correo
             </th>
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
-              Nacimiento
+              Fecha de Nacimiento
             </th>
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
-              Procedimiento
+              Dirección
             </th>
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
-              Status
+              Teléfono
             </th>
+            <th class="px-6 py-3 border-b-2 border-gray-300"></th>
             <th class="px-6 py-3 border-b-2 border-gray-300"></th>
           </tr>
         </thead>
         <tbody class="bg-white">
-          <tr>
+          <tr v-for="(patient, index) in patients" :key="index">
             <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-500">
               <div class="flex items-center">
                 <div>
-                  <div class="text-sm leading-5 text-gray-800">#1</div>
+                  <div class="text-sm leading-5 text-gray-800">#{{ index + 1 }}</div>
                 </div>
               </div>
             </td>
             <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-500">
-              <div class="text-sm leading-5 text-blue-900">Damilare Anjorin</div>
+              <div class="text-sm leading-5 text-blue-900">{{ patient.correo }}</div>
             </td>
             <td
               class="px-6 py-4 whitespace-no-wrap border-b text-blue-900 border-gray-500 text-sm leading-5"
             >
-              12 de junio, 2000
+              {{ patient.fecha_nacimiento }}
             </td>
             <td
               class="px-6 py-4 whitespace-no-wrap border-b text-blue-900 border-gray-500 text-sm leading-5"
             >
-              Ortodoncia
+              {{ patient.direccion }}
             </td>
             <td
               class="px-6 py-4 whitespace-no-wrap border-b border-gray-500 text-blue-900 text-sm leading-5"
             >
-              4 de marzo, 2024
+              {{ patient.telefono }}
             </td>
             <td
               class="px-6 py-4 whitespace-no-wrap text-right border-b border-gray-500 text-sm leading-5"
             >
               <button
                 @click="updatePatient('dsdspp')"
-                class="px-5 py-2 rounded-2xl border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
+                class="px-2 py-2 rounded-2xl text-xs border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
               >
                 Iniciar consulta
+              </button>
+            </td>
+            <td
+              class="px-6 py-4 whitespace-no-wrap text-right border-b border-gray-500 text-sm leading-5"
+            >
+              <button
+                @click="openRecord(index)"
+                class="px-2 py-2 rounded-2xl text-xs border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
+              >
+                Ver expediente
               </button>
             </td>
           </tr>
@@ -139,10 +190,12 @@ const updatePatient = (name: string) => {
     </div>
   </div>
 
+  <!-- inicio de consulta -->
+
   <section v-if="patientSelected" class="flex items-center justify-center">
     <div class="mx-auto w-full max-w-[550px]">
       <button
-        @click="patientSelected = false; currentPatient = ''"
+        @click="patientSelected = false;currentPatient = ''"
         class="flex hover:text-[#187897] hover:scale-105 items-center outline-none space-x-2 w-24 h-10 py-1 px-2 text-slate-500"
       >
         <svg
@@ -188,20 +241,19 @@ const updatePatient = (name: string) => {
           ></textarea>
         </div>
         <div id="treatments-container" class="my-5 grid grid-cols-3 gap-4">
-  <div>
-    <input type="checkbox" id="myCheckbox1" class="form-checkbox h-5 w-5 text-indigo-600">
-    <label for="myCheckbox1" class="ml-2 text-gray-700">Endodoncia</label>
-  </div>
-  <div>
-    <input type="checkbox" id="myCheckbox2" class="form-checkbox h-5 w-5 text-indigo-600">
-    <label for="myCheckbox2" class="ml-2 text-gray-700">Limpieza</label>
-  </div>
-  <div>
-    <input type="checkbox" id="myCheckbox3" class="form-checkbox h-5 w-5 text-indigo-600">
-    <label for="myCheckbox3" class="ml-2 text-gray-700">Extracción</label>
-  </div>
-</div>
-
+          <div>
+            <input type="checkbox" id="myCheckbox1" class="form-checkbox h-5 w-5 text-indigo-600" />
+            <label for="myCheckbox1" class="ml-2 text-gray-700">Endodoncia</label>
+          </div>
+          <div>
+            <input type="checkbox" id="myCheckbox2" class="form-checkbox h-5 w-5 text-indigo-600" />
+            <label for="myCheckbox2" class="ml-2 text-gray-700">Limpieza</label>
+          </div>
+          <div>
+            <input type="checkbox" id="myCheckbox3" class="form-checkbox h-5 w-5 text-indigo-600" />
+            <label for="myCheckbox3" class="ml-2 text-gray-700">Extracción</label>
+          </div>
+        </div>
 
         <div>
           <button
@@ -213,4 +265,201 @@ const updatePatient = (name: string) => {
       </form>
     </div>
   </section>
+
+  <!-- vista de expediente -->
+  <div
+    v-if="recordSelected"
+    class="fixed left-0 top-0 ml-20 flex h-full w-full items-center justify-center bg-slate-200 bg-opacity-50 py-10"
+  >
+    <div class="bg-white">
+      <button
+        @click="recordSelected = false"
+        type="button"
+        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+        data-modal-toggle="default-modal"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            clip-rule="evenodd"
+          ></path>
+        </svg>
+      </button>
+      <div
+        class="flex flex-row items-center gap-10 p-5 mx-auto max-w-4xl bg-white shadow-b-lg rounded-md text-[#333] font-[sans-serif]"
+      >
+        <div class="flex-1 bg-white rounded-lg py-8">
+          <h4 class="text-xl text-gray-900 font-bold">Información del paciente</h4>
+          <ul class="mt-2 text-gray-700">
+            <li class="flex border-y py-2">
+              <span class="font-bold w-24">Nombre:</span>
+              <span class="text-gray-700">Amanda S. Ross</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">Nacimiento:</span>
+              <span class="text-gray-700">24 Jul, 1991</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">DNI:</span>
+              <span class="text-gray-700">185889898989</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">Teléfono:</span>
+              <span class="text-gray-700">(123) 123-1234</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">Correo:</span>
+              <span class="text-gray-700">amandaross@example.com</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">Direccion:</span>
+              <span class="text-gray-700">New York, US</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="overflow-y-auto overflow-x-hidden sm:mx-0.5 lg:mx-0.5">
+          <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
+            <h4 class="text-xl text-gray-900 font-bold">Citas Previas</h4>
+            <div class="overflow-y-auto h-80">
+              <table class="min-w-full">
+                <thead class="bg-white border-b">
+                  <tr>
+                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
+                      Nombre
+                    </th>
+                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
+                      Fecha
+                    </th>
+                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
+                      Doctor
+                    </th>
+                    <th
+                      scope="col"
+                      class="text-sm font-medium text-gray-900 px-6 py-4 text-left"
+                    ></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="bg-gray-100 border-b">
+                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                      Jorge Coello
+                    </td>
+                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                      12/08/2024
+                    </td>
+                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                      Doctor1
+                    </td>
+                    <td class="whitespace-no-wrap text-right border-gray-500 text-sm leading-5">
+                      <button
+                        @click="invoiceSelected = true"
+                        class="px-2 py-2 text-sm rounded-2xl border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
+                      >
+                        Detalles
+                      </button>
+                    </td>
+                  </tr>
+                  <tr class="bg-gray-100 border-b">
+                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                      Jorge Coello
+                    </td>
+                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                      12/08/2024
+                    </td>
+                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                      Doctor1
+                    </td>
+                    <td class="whitespace-no-wrap text-right border-gray-500 text-sm leading-5">
+                      <button
+                        @click="invoiceSelected = true"
+                        class="px-2 py-2 text-sm rounded-2xl border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
+                      >
+                        Factura
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="invoiceSelected"
+    class="fixed left-0 top-0 flex h-full ml-10 w-full items-center justify-center bg-slate-200 bg-opacity-50 p-10"
+  >
+    <div class="bg-white p-5">
+      <button
+        @click="invoiceSelected = false"
+        type="button"
+        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+        data-modal-toggle="default-modal"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            clip-rule="evenodd"
+          ></path>
+        </svg>
+      </button>
+      <div
+        class="flex flex-row items-center gap-10 p-5 mx-auto max-w-4xl bg-white shadow-b-lg rounded-md text-[#333] font-[sans-serif]"
+      >
+        <div class="flex-1 bg-white rounded-lg py-8">
+          <h4 class="text-xl text-gray-900 font-bold">Detalle</h4>
+          <ul class="mt-2 text-gray-700">
+            <li class="flex border-y py-2">
+              <span class="font-bold w-24">Paciente:</span>
+              <span class="text-gray-700">Amanda S. Ross</span>
+            </li>
+
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24 mr-5">Tratamientos:</span>
+              <span class="relative inline-block px-3 py-1 font-semibold leading-tight">
+                <span
+                  aria-hidden
+                  class="absolute inset-0 bg-[#187897] opacity-20 rounded-full"
+                ></span>
+                <span class="relative text-xs">Extraccion</span> </span
+              >,
+              <span class="relative inline-block px-3 py-1 font-semibold leading-tight">
+                <span
+                  aria-hidden
+                  class="absolute inset-0 bg-[#187897] opacity-20 rounded-full"
+                ></span>
+                <span class="relative text-xs">Limpieaza</span> </span
+              >,
+              <span class="relative inline-block px-3 py-1 font-semibold leading-tight">
+                <span
+                  aria-hidden
+                  class="absolute inset-0 bg-[#187897] opacity-20 rounded-full"
+                ></span>
+                <span class="relative text-xs">Extraccion</span>
+              </span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">Doctor:</span>
+              <span class="text-gray-700">Mario Gonzales</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
