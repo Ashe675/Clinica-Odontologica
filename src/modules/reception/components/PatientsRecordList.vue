@@ -4,7 +4,16 @@ import { ref, onBeforeMount } from 'vue'
 var tratamientos=[
         { nombre: 'Endodoncia', id:1, selected: false },
         { nombre: 'Limpieza', id:2, selected: false },
-        { nombre: 'Extracción', id:3, selected: false }
+        { nombre: 'Extracción', id:3, selected: false },
+        { nombre: 'Protesis Fija', id:4, selected: false},
+        { nombre: 'Protesis Removible', id:5, selected: false}, 
+        { nombre: 'Protesis Total', id:6, selected: false},
+        { nombre: 'Implantes', id:7, selected: false},
+        { nombre: 'Ortodoncia', id:8, selected: false}, 
+        { nombre: 'Ortodoncia', id:9, selected: false}, 
+        { nombre: 'Cirugia Oral', id:10, selected: false},
+        { nombre: 'Limpieza de Caries', id:11, selected:false},
+        { nombre: 'Odontopediatría', id:12, selected:false}
       ]
 
 const alertaExito = ref(false)
@@ -162,6 +171,21 @@ async function obtenerExpediente( id:number) {
   console.log("consultas",consultasPaciente.value)
 
 
+}
+
+async function facturaPaciente(id:number) {
+  facturaSeleccionada.value = id
+  pacienteSeleccionado.value = true
+  dniPaciente.value = pacientes.value[id].dni
+
+  const url = 'http://127.0.0.1:8000/api-consultas/facturas/?facturaSeleccionada=' + facturaSeleccionada.value;
+  const response = await fetch(url{
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${localStorage.getItem('jwt-token')}`
+    }
+  })
 }
 
 
