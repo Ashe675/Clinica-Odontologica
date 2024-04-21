@@ -1,19 +1,25 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onBeforeMount, ref } from "vue";
 import PatientsList from "@/modules/doctor/components/PatientsList.vue";
 import NavBar from "@/modules/shared/components/NavBar.vue";
 import SideBar from "@/modules/shared/components/SideBar.vue";
+import Profile from "@/modules/shared/components/Profile.vue"
 
+const usuario = ref('')
 
-interface UserResponse {
-    firstName: string;
-    lastName: string;
+async function ObtenerUsuario() {
+  const response = await fetch(`http://127.0.0.1:8000/usuarios/profile/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${localStorage.getItem('jwt-token')}`
+    }
+  })
+  const data = await response.json()
+  usuario.value=data.username
+
+  console.log(data)
 }
-
-const userData = ref<UserResponse>({
-    firstName: "",
-    lastName: "",
-});
 
 const selectedOption = ref("consulta");
 const userRole='D'
@@ -22,13 +28,16 @@ function updateSelectedOption(value: string){
 selectedOption.value= value
 }
 
+onBeforeMount(() => {
+    ObtenerUsuario()
+})
+
 </script>
 
 <template>
     <div class="overflow-hidden">
         <NavBar
-        :firstName="userData.firstName"
-        :lastName="userData.lastName"
+        :usuario="usuario"
         />
         <div class="flex overflow-hidden bg-gray-50 pt-16">
             <SideBar    
@@ -49,12 +58,12 @@ selectedOption.value= value
                     <PatientsList/>
 
                     </div>
-                    <!-- <div
-                        v-if="selectedOption === 'expedientes'"
+                    <div
+                        v-if="selectedOption === 'perfil'"
                         class="p-0 sm:p-6 xl:p-8 h-full overflow-y-auto"
                     >
-                    <PatientsDiagnosticList/>
-                    </div> -->
+                    <Profile/>
+                    </div>
                 </main>
             </div>
         </div>

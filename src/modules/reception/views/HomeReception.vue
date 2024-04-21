@@ -4,47 +4,45 @@ import { onBeforeMount, ref, onUpdated } from "vue";
 import PatientsRecordList from "../components/PatientsRecordList.vue";
 import NewPatient from "../components/NewPatient.vue";
 import SideBar from "@/modules/shared/components/SideBar.vue";
+import Profile from "@/modules/shared/components/Profile.vue";
 
 const userRole='R'
 
 
-interface UserResponse {
-    ID: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-}
-
-
-const userData = ref<UserResponse>({
-    ID: "",
-    email: "",
-    firstName: "",
-    lastName: "",
-});
-
-
 const selectedOption = ref("expedientes");
-//const userId = ref("");
 
 function updateSelectedOption(value: string){
 selectedOption.value= value
 
 }
 
+const usuario = ref('')
+
+async function ObtenerUsuario() {
+  const response = await fetch(`http://127.0.0.1:8000/usuarios/profile/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${localStorage.getItem('jwt-token')}`
+    }
+  })
+  const data = await response.json()
+  usuario.value=data.username
+
+  console.log(data)
+}
+
+
 onBeforeMount(() => {
-});
+    ObtenerUsuario()
+})
 
-onUpdated(() => {
-
-});
 </script>
 
 <template>
     <div class="overflow-hidden">
         <NavBar
-        :firstName="userData.firstName"
-        :lastName="userData.lastName"
+        :usuario="usuario"
         />
         <div class="flex overflow-hidden bg-gray-50 pt-16">
             <SideBar
@@ -69,6 +67,12 @@ onUpdated(() => {
                         class="p-0 sm:p-6 xl:p-8 h-full overflow-y-auto"
                     >
                     <NewPatient/>
+                    </div>
+                    <div
+                        v-if="selectedOption === 'perfil'"
+                        class="p-0 sm:p-6 xl:p-8 h-full overflow-y-auto"
+                    >
+                    <Profile/>
                     </div>
                 
                 </main>

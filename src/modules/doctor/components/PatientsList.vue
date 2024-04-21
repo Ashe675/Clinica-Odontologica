@@ -1,27 +1,54 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue'
 
-var currentPatient = ref('')
-var patientSelected = ref(false)
-var patients = ref([])
-var recordSelected = ref(false)
-var recordSelectedId = ref(0)
-var invoiceSelected = ref(false)
+var tratamientos=[
+        { nombre: 'Endodoncia', id:1, selected: false },
+        { nombre: 'Limpieza', id:2, selected: false },
+        { nombre: 'Extracción', id:3, selected: false }
+      ]
 
+const alertaExito = ref(false)
+const alertaError = ref(false)
+const errorMsg = ref('')
 
-const openRecord = (id: number) => {
-  recordSelectedId.value = id
-  recordSelected.value = true
-  GetPatient(id)
+var pacienteSeleccionado= ref([])
+var pacienteConsulta= ref('')
+var crearConsulta = ref(false)
+var pacientes = ref([])
+var diagnosticoSeleccinado = ref(false)
+var diagnosticoSeleccinadoId = ref(0)
+var facturaSeleccionada = ref(false)
+var consultasPaciente= ref('')
+var consultaPaciente= ref('')
+var expedienteSeleccionado=ref([])
+var dniPaciente= ref('')
+const motivoConsulta = ref('')
+const observaciones = ref('')
+
+function CamposVacios() {
+  const hayTratamientoSeleccionado = tratamientos.some(tratamiento => tratamiento.selected);
+  const motivoVacio = motivoConsulta.value.trim() === '';
+  const observacionesVacias = observaciones.value.trim() === '';
+
+  return !hayTratamientoSeleccionado || motivoVacio || observacionesVacias;
 }
 
-const updatePatient = (name: string) => {
-  currentPatient.value = name
-  patientSelected.value = true
+function verDetalleConsulta(id: number){
+  facturaSeleccionada.value = true;
+  consultaPaciente.value=consultasPaciente.value[id]
+  console.log(consultasPaciente.value[id])
 }
 
-async function GetPatient(id: number) {
-  const response = await fetch(`http://127.0.0.1:8000/api_pacientes/pacientes/${id + 1}`, {
+
+const ComenzarConsulta = (nombre : string, apellido: string,id:number) => {
+  crearConsulta.value = true
+  pacienteConsulta.value=nombre + " "+ apellido
+  ObtenerPaciente(id)
+}
+
+async function ObtenerPaciente(id:number) {
+  let strID = id.toString()
+  const response = await fetch(`http://127.0.0.1:8000/api-pacientes/pacientes/`+ strID, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -29,12 +56,67 @@ async function GetPatient(id: number) {
     }
   })
   const data = await response.json()
-  console.log('paciente', data)
+  dniPaciente.value= data.dni
+  console.log("info",dniPaciente.value)
 }
 
 
-async function PatientsList() {
-  const response = await fetch('http://127.0.0.1:8000/api_pacientes/pacientes/', {
+async function GuardarConsulta(){
+
+  if  (CamposVacios() ){
+    alertaError.value=true
+      errorMsg.value="los campos no deben estar vacios"
+      setTimeout(() => {
+        alertaError.value = false
+      }, 3000)
+  }
+  else{
+
+    const tratamientosSeleccionados = tratamientos
+          .filter(tratamiento => tratamiento.selected)
+          .map(tratamiento => tratamiento.id);
+  
+  
+    const response = await fetch('http://127.0.0.1:8000/api-consultas/create-consulta/',{
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Token ${localStorage.getItem('jwt-token')}`
+      },
+      body: JSON.stringify({
+        motivo_consulta: motivoConsulta.value,
+        descripcion: observaciones.value,
+        dniPaciente: dniPaciente.value,
+        tratamientos: tratamientosSeleccionados
+      })
+    })
+  
+    const data = await response.json()
+    console.log(data)
+  
+    if (response.ok) {
+      alertaExito.value = true
+      setTimeout(() => {
+        alertaExito.value = false
+      }, 2500)
+    } else {
+      errorMsg.value = 'Hubo un error.,'
+      alertaError.value = true
+      setTimeout(() => {
+        alertaError.value = false
+      }, 3000)
+    }
+    motivoConsulta.value = ''
+    observaciones.value = ''
+    tratamientos.forEach(tratamiento => {
+          tratamiento.selected = false;
+        })
+  }
+}
+
+
+async function ObtenerTratamientos() {
+  const response = await fetch(`http://127.0.0.1:8000/api-consultas/tratamientos`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -42,19 +124,57 @@ async function PatientsList() {
     }
   })
   const data = await response.json()
-  patients.value = data
-  console.log(data)
 }
+
+async function ObtenerListaDePacientes() {
+  const response = await fetch('http://127.0.0.1:8000/api-pacientes/pacientes/', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${localStorage.getItem('jwt-token')}`
+    }
+  })
+  const data = await response.json()
+  pacientes.value = data
+}
+
+
+async function obtenerExpediente( id:number) {
+  diagnosticoSeleccinadoId.value = id
+  diagnosticoSeleccinado.value = true
+  dniPaciente.value= pacientes.value[id].dni
+ 
+
+  const url = 'http://127.0.0.1:8000/api-consultas/expediente/?dniPaciente=' + dniPaciente.value;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${localStorage.getItem('jwt-token')}`
+    }
+  }
+  )
+  const data = await response.json()
+  expedienteSeleccionado.value=data
+  pacienteSeleccionado.value= expedienteSeleccionado.value.paciente
+  consultasPaciente.value= expedienteSeleccionado.value.consultas
+  console.log("consultas",consultasPaciente.value)
+
+
+}
+
 
 onBeforeMount(() => {
-  PatientsList()
+  ObtenerListaDePacientes()
+  ObtenerTratamientos()
 })
 </script>
 
 <template>
   <!-- component -->
   <div
-    v-if="!patientSelected"
+    v-if="!crearConsulta"
     class="-my-2 py-0 overflow-x-auto sm:-mx-6 sm:px-6 lg:-mx-8 pr-10 lg:px-8"
   >
     <div
@@ -100,15 +220,20 @@ onBeforeMount(() => {
       </div>
     </div>
     <div
-      class="align-middle inline-block min-w-full shadow overflow-hidden bg-white shadow-dashboard px-8 pt-3 rounded-bl-lg rounded-br-lg"
+      class="align-middle inline-block min-w-full shadow overflow-hidden bg-white shadow-dashboard px-2 pt-3 rounded-bl-lg rounded-br-lg"
     >
       <table class="min-w-full">
         <thead>
           <tr>
             <th
-              class="px-6 py-3 border-b-2 border-gray-300 text-left leading-4 text-[#187897] tracking-wider"
+              class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
-              ID
+              #ID
+            </th>
+            <th
+              class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
+            >
+              Nombre
             </th>
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
@@ -118,28 +243,32 @@ onBeforeMount(() => {
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
-              Fecha de Nacimiento
+              Nacimiento
             </th>
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
-              Dirección
+              DNI
             </th>
             <th
               class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider"
             >
               Teléfono
             </th>
-            <th class="px-6 py-3 border-b-2 border-gray-300"></th>
-            <th class="px-6 py-3 border-b-2 border-gray-300"></th>
+            <th class="px-6 py-3 border-b-2 border-gray-300 text-left text-sm leading-4 text-[#187897] tracking-wider">Acciones</th>
+          
           </tr>
         </thead>
         <tbody class="bg-white">
-          <tr v-for="(patient, index) in patients" :key="index">
+          <tr v-for="(patient, index) in pacientes" :key="index">
+            <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-500">
+              <div class="text-sm leading-5 text-blue-900">{{ index +1 }}</div>
+            </td>
+            
             <td class="px-6 py-4 whitespace-no-wrap border-b border-gray-500">
               <div class="flex items-center">
                 <div>
-                  <div class="text-sm leading-5 text-gray-800">#{{ index + 1 }}</div>
+                  <div class="text-sm leading-5 text-blue-900">{{ patient.primer_nombre }} {{ patient.primer_apellido }}</div>
                 </div>
               </div>
             </td>
@@ -154,7 +283,7 @@ onBeforeMount(() => {
             <td
               class="px-6 py-4 whitespace-no-wrap border-b text-blue-900 border-gray-500 text-sm leading-5"
             >
-              {{ patient.direccion }}
+              {{ patient.dni }}
             </td>
             <td
               class="px-6 py-4 whitespace-no-wrap border-b border-gray-500 text-blue-900 text-sm leading-5"
@@ -162,23 +291,23 @@ onBeforeMount(() => {
               {{ patient.telefono }}
             </td>
             <td
-              class="px-6 py-4 whitespace-no-wrap text-right border-b border-gray-500 text-sm leading-5"
+              class="px-6 py-4 whitespace-no-wrap text-right border-b flex flex-col gap-2 border-gray-500 text-sm "
             >
               <button
-                @click="updatePatient('dsdspp')"
-                class="px-2 py-2 rounded-2xl text-xs border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
+                @click="ComenzarConsulta(patient.primer_nombre, patient.primer_apellido, index+1 )"
+                class="group relative h-10 w-36 overflow-hidden hover:scale rounded-2xl bg-[#187897] text-sm font-bold text-white"
               >
-                Iniciar consulta
+            Iniciar consulta
+            <div class="absolute inset-0 h-full w-full scale-0 rounded-2xl transition-all duration-300 group-hover:scale-100 group-hover:bg-white/30"></div>
+
+            
               </button>
-            </td>
-            <td
-              class="px-6 py-4 whitespace-no-wrap text-right border-b border-gray-500 text-sm leading-5"
-            >
               <button
-                @click="openRecord(index)"
-                class="px-2 py-2 rounded-2xl text-xs border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
+                @click="obtenerExpediente(index)"
+                class="group relative h-10 w-36 overflow-hidden hover:shadow-lg rounded-2xl bg-[#187897] text-sm font-bold text-white"
               >
                 Ver expediente
+                <div class="absolute inset-0 h-full w-full scale-0 rounded-2xl transition-all duration-300 group-hover:scale-100 group-hover:bg-white/30"></div>
               </button>
             </td>
           </tr>
@@ -192,10 +321,10 @@ onBeforeMount(() => {
 
   <!-- inicio de consulta -->
 
-  <section v-if="patientSelected" class="flex items-center justify-center">
+  <section v-if="crearConsulta" class="flex items-center justify-center">
     <div class="mx-auto w-full max-w-[550px]">
       <button
-        @click="patientSelected = false;currentPatient = ''"
+        @click="crearConsulta = false"
         class="flex hover:text-[#187897] hover:scale-105 items-center outline-none space-x-2 w-24 h-10 py-1 px-2 text-slate-500"
       >
         <svg
@@ -214,8 +343,8 @@ onBeforeMount(() => {
         </svg>
         <span>Back</span>
       </button>
-      <h1 class="font-bold my-5 text-xl">Paciente: {{ currentPatient }}</h1>
-      <form action="#" method="POST">
+      <h1 class="font-bold my-5 text-xl">Paciente: {{pacienteConsulta}}</h1>
+      <form @submit.prevent="GuardarConsulta()">
         <div class="mb-5">
           <label for="message" class="mb-3 block text-base font-medium text-[#07074D]">
             Motivo de la consulta
@@ -225,6 +354,7 @@ onBeforeMount(() => {
             name="message"
             id="message"
             placeholder=""
+            v-model="motivoConsulta"
             class="w-full resize-none rounded-md border border-[#e0e0e0] bg-white py-3 px-6 text-base font-medium text-[#6B7280] outline-none focus:border-[#187897] focus:shadow-md"
           ></textarea>
         </div>
@@ -237,43 +367,77 @@ onBeforeMount(() => {
             name="message"
             id="message"
             placeholder=""
+            v-model="observaciones"
             class="w-full resize-none rounded-md border border-[#e0e0e0] bg-white py-3 px-6 text-base font-medium text-[#6B7280] outline-none focus:border-[#187897] focus:shadow-md"
           ></textarea>
         </div>
-        <div id="treatments-container" class="my-5 grid grid-cols-3 gap-4">
-          <div>
-            <input type="checkbox" id="myCheckbox1" class="form-checkbox h-5 w-5 text-indigo-600" />
-            <label for="myCheckbox1" class="ml-2 text-gray-700">Endodoncia</label>
-          </div>
-          <div>
-            <input type="checkbox" id="myCheckbox2" class="form-checkbox h-5 w-5 text-indigo-600" />
-            <label for="myCheckbox2" class="ml-2 text-gray-700">Limpieza</label>
-          </div>
-          <div>
-            <input type="checkbox" id="myCheckbox3" class="form-checkbox h-5 w-5 text-indigo-600" />
-            <label for="myCheckbox3" class="ml-2 text-gray-700">Extracción</label>
-          </div>
-        </div>
+        <div class="inline mx-2" v-for="(tratamiento, index) in tratamientos" :key="index">
+          <input type="checkbox" :id="'myCheckbox' + (index + 1)" class="form-checkbox h-5 w-5 text-indigo-600" v-model="tratamiento.selected">
+          <label :for="'myCheckbox' + (index + 1)" class="ml-2 text-gray-700">{{ tratamiento.nombre }}</label>
+      </div>
 
         <div>
           <button
-            class="hover:shadow-form rounded-2xl bg-[#187897] py-2 px-8 text-center text-base font-semibold text-white outline-none"
+            class="hover:shadow-form rounded-2xl mt-5 bg-[#187897] py-2 px-8 text-center text-base font-semibold text-white outline-none"
           >
             Guardar
           </button>
         </div>
       </form>
     </div>
+    <div
+      v-if="alertaExito"
+      class="fixed w-82 bottom-4.5 left-1/2 transform -translate-x-1/2 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded"
+      role="alert"
+    >
+      <svg
+        class="w-5 h-5 inline mr-3"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+          clip-rule="evenodd"
+        ></path>
+      </svg>
+      <div>
+        <span class="font-medium">¡Consulta agregada!</span>
+      </div>
+    </div>
+
+    <div
+      v-if="alertaError"
+      class="fixed w-82 bottom-4.5 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded"
+      role="alert"
+    >
+      <svg
+        class="w-5 h-5 inline mr-3"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+          clip-rule="evenodd"
+        ></path>
+      </svg>
+      <div>
+        <span class="font-medium">{{errorMsg}}</span>
+      </div>
+    </div>
   </section>
 
   <!-- vista de expediente -->
   <div
-    v-if="recordSelected"
+    v-if="diagnosticoSeleccinado"
     class="fixed left-0 top-0 ml-20 flex h-full w-full items-center justify-center bg-slate-200 bg-opacity-50 py-10"
   >
     <div class="bg-white">
       <button
-        @click="recordSelected = false"
+        @click="diagnosticoSeleccinado = false"
         type="button"
         class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
         data-modal-toggle="default-modal"
@@ -299,27 +463,27 @@ onBeforeMount(() => {
           <ul class="mt-2 text-gray-700">
             <li class="flex border-y py-2">
               <span class="font-bold w-24">Nombre:</span>
-              <span class="text-gray-700">Amanda S. Ross</span>
+              <span class="text-gray-600 mt-1 text-xs">{{pacienteSeleccionado.primer_nombre}} {{pacienteSeleccionado.primer_apellido}}</span>
             </li>
             <li class="flex border-b py-2">
               <span class="font-bold w-24">Nacimiento:</span>
-              <span class="text-gray-700">24 Jul, 1991</span>
+              <span class="text-gray-600 mt-1 text-xs">{{pacienteSeleccionado.fecha_nacimiento}}</span>
             </li>
             <li class="flex border-b py-2">
               <span class="font-bold w-24">DNI:</span>
-              <span class="text-gray-700">185889898989</span>
+              <span class="text-gray-600 mt-1 text-xs ">{{pacienteSeleccionado.dni}}</span>
             </li>
             <li class="flex border-b py-2">
               <span class="font-bold w-24">Teléfono:</span>
-              <span class="text-gray-700">(123) 123-1234</span>
+              <span class="text-gray-600 mt-1 text-xs">{{pacienteSeleccionado.telefono}}</span>
             </li>
             <li class="flex border-b py-2">
               <span class="font-bold w-24">Correo:</span>
-              <span class="text-gray-700">amandaross@example.com</span>
+              <span class="text-gray-600 mt-1 text-xs">{{pacienteSeleccionado.correo}}</span>
             </li>
             <li class="flex border-b py-2">
               <span class="font-bold w-24">Direccion:</span>
-              <span class="text-gray-700">New York, US</span>
+              <span class="text-gray-600 mt-1 text-xs">{{pacienteSeleccionado.direccion}}</span>
             </li>
           </ul>
         </div>
@@ -331,14 +495,11 @@ onBeforeMount(() => {
               <table class="min-w-full">
                 <thead class="bg-white border-b">
                   <tr>
-                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                      Nombre
+                    <th scope="col" class="text-sm  font-bold text-gray-900 px-6 py-4 text-left">
+                      
                     </th>
-                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                      Fecha
-                    </th>
-                    <th scope="col" class="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                      Doctor
+                    <th scope="col" class="text-sm font-bold text-gray-900 px-6 py-4 text-left w-10">
+                      
                     </th>
                     <th
                       scope="col"
@@ -347,41 +508,24 @@ onBeforeMount(() => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="bg-gray-100 border-b">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                      Jorge Coello
+                  <tr 
+                  v-for="(consulta, index) in consultasPaciente" :key="index"
+                  :class="['', index%2 ==0  ? 'bg-[#dedfe01c]' : 'bg-[#00609c10]']"
+                   class="bg-gray-100 border-b">
+                    <td class="text-xs text-gray-900 font-light px-6 py-4 whitespace-nowrap">
+                      {{consulta.fecha}}
                     </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                      12/08/2024
+                    <td class="text-xs leading-6 line-clamp-2 mx-3 text-gray-900 text-ellipsis w-[10rem]">
+                      {{consulta.descripcion}}
                     </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                      Doctor1
-                    </td>
+                    
                     <td class="whitespace-no-wrap text-right border-gray-500 text-sm leading-5">
                       <button
-                        @click="invoiceSelected = true"
-                        class="px-2 py-2 text-sm rounded-2xl border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
+                        @click=" verDetalleConsulta(index)"
+                        class="group relative h-8 w-20 overflow-hidden hover:shadow-lg rounded-2xl bg-[#187897] text-sm font-bold text-white"
                       >
                         Detalles
-                      </button>
-                    </td>
-                  </tr>
-                  <tr class="bg-gray-100 border-b">
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                      Jorge Coello
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                      12/08/2024
-                    </td>
-                    <td class="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
-                      Doctor1
-                    </td>
-                    <td class="whitespace-no-wrap text-right border-gray-500 text-sm leading-5">
-                      <button
-                        @click="invoiceSelected = true"
-                        class="px-2 py-2 text-sm rounded-2xl border-[#187897] border text-[#187897] font-bold transition duration-300 hover:bg-[#187897] hover:text-white focus:outline-none"
-                      >
-                        Factura
+                        <div class="absolute inset-0 h-full w-full scale-0 rounded-2xl transition-all duration-300 group-hover:scale-100 group-hover:bg-white/30"></div>
                       </button>
                     </td>
                   </tr>
@@ -395,12 +539,12 @@ onBeforeMount(() => {
   </div>
 
   <div
-    v-if="invoiceSelected"
+    v-if="facturaSeleccionada"
     class="fixed left-0 top-0 flex h-full ml-10 w-full items-center justify-center bg-slate-200 bg-opacity-50 p-10"
   >
     <div class="bg-white p-5">
       <button
-        @click="invoiceSelected = false"
+        @click="facturaSeleccionada = false"
         type="button"
         class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
         data-modal-toggle="default-modal"
@@ -422,40 +566,40 @@ onBeforeMount(() => {
         class="flex flex-row items-center gap-10 p-5 mx-auto max-w-4xl bg-white shadow-b-lg rounded-md text-[#333] font-[sans-serif]"
       >
         <div class="flex-1 bg-white rounded-lg py-8">
-          <h4 class="text-xl text-gray-900 font-bold">Detalle</h4>
+          <h4 class="text-xl text-gray-900 font-bold">Detalle de consulta</h4>
           <ul class="mt-2 text-gray-700">
             <li class="flex border-y py-2">
               <span class="font-bold w-24">Paciente:</span>
-              <span class="text-gray-700">Amanda S. Ross</span>
+              <span class="text-gray-700">{{consultaPaciente.paciente}}</span>
             </li>
 
+
             <li class="flex border-b py-2">
-              <span class="font-bold w-24 mr-5">Tratamientos:</span>
-              <span class="relative inline-block px-3 py-1 font-semibold leading-tight">
-                <span
-                  aria-hidden
-                  class="absolute inset-0 bg-[#187897] opacity-20 rounded-full"
-                ></span>
-                <span class="relative text-xs">Extraccion</span> </span
-              >,
-              <span class="relative inline-block px-3 py-1 font-semibold leading-tight">
-                <span
-                  aria-hidden
-                  class="absolute inset-0 bg-[#187897] opacity-20 rounded-full"
-                ></span>
-                <span class="relative text-xs">Limpieaza</span> </span
-              >,
-              <span class="relative inline-block px-3 py-1 font-semibold leading-tight">
-                <span
-                  aria-hidden
-                  class="absolute inset-0 bg-[#187897] opacity-20 rounded-full"
-                ></span>
-                <span class="relative text-xs">Extraccion</span>
-              </span>
+              <span class="font-bold w-24">Expediente:</span>
+              <span class="text-gray-700">{{consultaPaciente.expediente_id}}</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">Motivo:</span>
+              <span class="text-gray-700 leading-6 line-clamp-2 mx-3 text-ellipsis w-[20rem]">{{consultaPaciente.motivo_consulta}}</span>
             </li>
             <li class="flex border-b py-2">
               <span class="font-bold w-24">Doctor:</span>
-              <span class="text-gray-700">Mario Gonzales</span>
+              <span class="text-gray-700">{{consultaPaciente.doctor}}</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24">Descripcion:</span>
+              <span class="text-gray-700  leading-6  mx-3 text-ellipsis w-[20rem]">{{consultaPaciente.descripcion}}</span>
+            </li>
+            <li class="flex border-b py-2">
+              <span class="font-bold w-24 mr-5">Tratamientos:</span>
+              <span v-for="(tratamiento,index) in consultaPaciente.tratamientos" :key="index"
+               class="relative inline-block px-3 py-1 font-semibold leading-tight">
+                <span
+                  aria-hidden
+                  class="absolute inset-0 bg-[#187897] opacity-20 rounded-full"
+                ></span>
+                <span class="relative text-xs">{{tratamiento.tratamiento}}</span> </span
+              >
             </li>
           </ul>
         </div>
@@ -463,3 +607,4 @@ onBeforeMount(() => {
     </div>
   </div>
 </template>
+

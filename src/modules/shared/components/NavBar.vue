@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 
 interface Props {
-  firstName: String
-  lastName: String
+  usuario: String
 }
 
 const props = defineProps<Props>()
@@ -22,9 +21,9 @@ const props = defineProps<Props>()
         <div class="flex items-center mr-auto">
           <div class="ml-36">
             <h1 class="text-secondary-dark text-slate-700 font-semibold text-xl block">
-              Welcome,
+              Bienvenido,
               <span class="font-bold text-[#187897] text-lg">
-                {{ props.firstName }} Manuel {{ props.lastName }} Cerrato
+                {{ props.usuario }}
               </span>
             </h1>
           </div>
